@@ -4,6 +4,8 @@ import { createCanvas, Image } from 'canvas';
 import { SphericalMercator } from '@mapbox/sphericalmercator';
 
 const mercator = new SphericalMercator();
+const annotationSize = 10;
+const annotationFont = '14px Arial';
 
 // Constants
 const CONSTANTS = {
@@ -238,7 +240,27 @@ const drawPath = (ctx, path, query, pathQuery, z) => {
   // Start the path - transform coordinates to pixels on canvas and draw lines between points
   ctx.beginPath();
 
+  let pathWidth = 3;
+  const thisPathHasWidth = splitPaths.filter((x) => x.startsWith('width')).length > 0;
+  if (query.width !== undefined || thisPathHasWidth) {
+    // Get line width from query
+    if ('width' in query) {
+      pathWidth = Number(query.width);
+    }
+  }
+
   for (const [i, pair] of path.entries()) {
+    if (pair.length === 5) {
+      ctx.stroke();
+      ctx.lineWidth = pathWidth;
+      ctx.beginPath();
+      let lineColor = pair[4];
+      if (lineColor.startsWith("#")){
+        lineColor = hexToRGBA(lineColor)
+      }
+      ctx.strokeStyle = lineColor
+    }
+
     const px = precisePx(pair, z);
     if (i === 0) {
       ctx.moveTo(px[0], px[1]);
@@ -380,7 +402,80 @@ const drawPath = (ctx, path, query, pathQuery, z) => {
   }
 
   ctx.stroke();
+
+  let pathDirection = query.pathDirection !== undefined ? parseInt(query.pathDirection) : -1;
+
+  path.forEach(function(pair, index) {
+    if (index === 0 && pathDirection >= 0) {
+      // the query contains a path direction
+      let px = precisePx(pair, z);
+      let x = parseInt(px[0]);
+      let y = parseInt(px[1]);
+
+      drawDirection(ctx, x, y, pathDirection);
+    } else if (pair.length >= 4) {
+      // the pair contains annoation details
+      let px = precisePx(pair, z);
+      let x = parseInt(px[0]);
+      let y = parseInt(px[1]);
+      let text = pair[2];
+      let color = pair[3];
+      if (color.startsWith("#")){
+        color = hexToRGBA(color)
+      }
+      drawAnnotation(ctx, x, y, text, color);
+    }
+  });
 };
+
+const drawAnnotation = function(ctx, x, y, text, color) {
+  ctx.beginPath();
+  ctx.arc(x, y, annotationSize, 0, Math.PI * 2, false);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(x, y, annotationSize / 3, 0, Math.PI * 2, false);
+  ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+  ctx.fill();
+
+  ctx.font = annotationFont;
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y - annotationSize * 2);
+}
+
+function drawDirection(ctx, x, y, pathDirection) {
+  ctx.translate(x,y);
+  ctx.rotate((pathDirection) * Math.PI / 180);
+  ctx.translate(-16,-16);
+  ctx.beginPath();
+  ctx.moveTo(-0, 31.97);
+  ctx.bezierCurveTo(-0, 31.88, 16, -0.03, 16.03, 0);
+  ctx.bezierCurveTo(16.12, 0.11, 32.03, 31.98, 32, 31.99);
+  ctx.bezierCurveTo(31.98, 31.99, 28.37, 30.45, 23.99, 28.55);
+  ctx.lineTo(16.01, 25.09);
+  ctx.lineTo(8.04, 28.55);
+  ctx.bezierCurveTo(3.66, 30.45, 0.06, 32, 0.04, 32);
+  ctx.bezierCurveTo(0.02, 32, -0, 31.99, -0, 31.97);
+  ctx.closePath();
+  ctx.fillStyle = 'blue';
+  ctx.fill();
+  ctx.restore();
+}
+
+function hexToRGBA(hex){
+  if(!hex.startsWith("#") || hex.length !== 7) {
+    return 'rgba(0,0,0,1.0)' // black
+  }
+
+  hex = hex.replace('#', '');
+
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+
+  return 'rgba(' + r + ', ' + g + ', ' + b + ',1.0)';
+}
 
 /**
  * Renders an overlay with paths and markers on a map tile.

@@ -23,6 +23,7 @@ import sanitize from 'sanitize-filename';
 import { SphericalMercator } from '@mapbox/sphericalmercator';
 import mlgl from '@maplibre/maplibre-gl-native';
 import polyline from '@mapbox/polyline';
+import geoViewport from '@mapbox/geo-viewport';
 import proj4 from 'proj4';
 import {
   allowedScales,
@@ -261,12 +262,30 @@ function extractPathsFromQuery(query, transformer) {
           // Extract coordinates from coordinate pair
           const pairParts = pair.split(',');
           // Ensure we have two coordinates
-          if (pairParts.length === 2) {
+          if (pairParts.length >= 2) {
             const pair = parseCoordinates(pairParts, query, transformer);
 
             // Ensure coordinates could be parsed and skip them if not
             if (pair === null) {
               continue;
+            }
+
+            if (pairParts.length === 4) {
+              // extract annotation
+              let text = pairParts[2];
+              let color = pairParts[3].toLowerCase();
+              pair.push(text);
+              pair.push(color);
+            }
+
+            if (pairParts.length === 5) {
+              // extract annotation
+              let text = pairParts[2];
+              let color = pairParts[3].toLowerCase();
+              let lineColor = pairParts[4].toLowerCase();
+              pair.push(text);
+              pair.push(color);
+              pair.push(lineColor);
             }
 
             // Add the coordinate-pair to the current path if they are valid
