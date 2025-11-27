@@ -595,7 +595,7 @@ export const renderAttribution = (width, height, scale, text) => {
   const textHeight = 14;
 
   const padding = 6;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.fillRect(
     width - textWidth - padding,
     height - textHeight - padding,
