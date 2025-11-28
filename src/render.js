@@ -602,7 +602,7 @@ export const renderAttribution = (width, height, scale, text) => {
     textWidth + padding,
     textHeight + padding,
   );
-  ctx.fillStyle = 'rgba(0,0,0,.8)';
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
   ctx.fillText(text, width - textWidth - padding / 2, height - textHeight + 8);
 
   return canvas;
